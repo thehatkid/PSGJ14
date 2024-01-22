@@ -1,0 +1,6 @@
+# Godot project local files
+.godot/
+*.tmp
+
+# Miscellaneous
+*.bak

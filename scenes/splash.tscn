@@ -1,0 +1,71 @@
+[gd_scene load_steps=4 format=3 uid="uid://cg37jracgk6o1"]
+
+[ext_resource type="Texture2D" uid="uid://pysqvg8hecw5" path="res://resources/sprites/splash_presents.png" id="1_taxub"]
+[ext_resource type="AudioStream" uid="uid://1gu0s5x6a82k" path="res://resources/audio/se/presents.wav" id="3_5pxmm"]
+
+[sub_resource type="GDScript" id="GDScript_xlcnl"]
+resource_name = "splash"
+script/source = "extends Node2D
+
+var timer: float = 0.0
+var se_played: bool = false
+var faded: bool = false
+
+@onready var tr_splash: TextureRect = $CanvasLayer/VBox/Presents
+@onready var se_splash: AudioStreamPlayer = $SESplash
+
+
+func _ready():
+	tr_splash.visible = false
+
+
+func _process(delta: float):
+	timer += delta
+
+	if int(timer) >= 1 and not se_played:
+		tr_splash.visible = true
+		se_splash.play()
+		se_played = true
+
+	if int(timer) >= 3 and not faded:
+		tr_splash.modulate.a -= delta
+		if tr_splash.modulate.a <= 0.01:
+			tr_splash.visible = false
+			faded = true
+			get_tree().change_scene_to_file(\"res://scenes/menu.tscn\")
+"
+
+[node name="SceneSplash" type="Node2D"]
+script = SubResource("GDScript_xlcnl")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Background" type="ColorRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -108.0
+offset_top = -39.0
+offset_right = 108.0
+offset_bottom = 39.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Presents" type="TextureRect" parent="CanvasLayer/VBox"]
+layout_mode = 2
+texture = ExtResource("1_taxub")
+
+[node name="SESplash" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_5pxmm")
+volume_db = -10.0
+mix_target = 2

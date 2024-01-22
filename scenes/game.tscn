@@ -1,0 +1,1797 @@
+[gd_scene load_steps=56 format=3 uid="uid://d2n77k2p77id5"]
+
+[ext_resource type="Script" path="res://scenes/game.gd" id="1_rnpc1"]
+[ext_resource type="Texture2D" uid="uid://dna70budtnokc" path="res://resources/backgrounds/gradient_1.png" id="2_t0s2q"]
+[ext_resource type="Texture2D" uid="uid://dw4trfd6a73xh" path="res://resources/sprites/startbutton.png" id="3_nsn3f"]
+[ext_resource type="Texture2D" uid="uid://coilrvntwktio" path="res://resources/sprites/desktop/godot.png" id="3_sqklt"]
+[ext_resource type="Texture2D" uid="uid://b0x6f8l4xgtsj" path="res://resources/sprites/desktop/devskill.png" id="4_yloah"]
+[ext_resource type="Texture2D" uid="uid://vs13fmj4tar7" path="res://resources/sprites/window_close.png" id="5_pv4fn"]
+[ext_resource type="Texture2D" uid="uid://cfv6d5cuary3k" path="res://resources/sprites/user_default.png" id="5_whxx8"]
+[ext_resource type="AudioStream" uid="uid://c6sxbccffs1kd" path="res://resources/audio/se/learned.wav" id="6_n00jc"]
+
+[sub_resource type="GDScript" id="GDScript_am1vl"]
+resource_name = "debugtext"
+script/source = "extends RichTextLabel
+
+var _player: Player = Global.player
+
+var debug: bool = OS.is_debug_build()
+
+
+func _ready():
+	if debug:
+		self.visible = true
+
+
+func _process(_delta):
+	if debug:
+		self.text = \"Day: {d} | Time: {t} | Paused: {p}\\n\".format({
+			\"d\": _player.get_day_count(),
+			\"t\": _player.get_day_time_string(),
+			\"p\": _player.is_day_paused()
+		})
+		self.text += \"Energy: {e} | Mental Health: {h}\\n\".format({
+			\"e\": _player.energy,
+			\"h\": _player.mental_health
+		})
+		self.text += \"Experience: {e} | Money: {m} | Profit: {p}\\n\".format({
+			\"e\": _player.experience,
+			\"m\": _player.money,
+			\"p\": _player.get_profit()
+		})
+		self.text += \"Energy consume: {ec}\\n\".format({
+			\"ec\": _player.get_energy_consuming()
+		})
+		self.text += \"Downloads multiply: {dlm} | Experience multiply: {em}\\n\".format({
+			\"dlm\": _player.get_downloads_multiply(),
+			\"em\": _player.get_experience_multiply()
+		})
+
+		self.text += \"\\nGames:\\n\\n\"
+		for g in _player.games:
+			self.text += \"#{i}: {n} ({at}%) | Genre: {g}\\n\".format({
+				\"i\": g.id, \"n\": g.name, \"at\": g.finished_at, \"g\": g.genre
+			})
+			self.text += \"    Downloads: {d} | Rating: {r} | Paid off: {p}\\n\".format({
+				\"d\": g.downloads, \"r\": g.rating, \"p\": g.paid_off
+			})
+			self.text += \"\\n\"
+"
+
+[sub_resource type="GDScript" id="GDScript_7i8og"]
+resource_name = "icons_handler"
+script/source = "extends GridContainer
+
+var icon_maker: ColorRect
+var icon_skills: ColorRect
+
+var layer_maker: CanvasLayer
+var layer_skills: CanvasLayer
+
+var startmenu: Panel
+
+
+func _ready():
+	icon_maker = $IconMaker
+	icon_skills = $IconSkills
+
+	layer_maker = get_node(\"../GroupWindows/LayerMaker\")
+	layer_skills = get_node(\"../GroupWindows/LayerSkills\")
+
+	startmenu = get_node(\"../StartMenu\")
+
+
+func _on_icon_maker_gui_input(event: InputEvent):
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index == 1:
+			startmenu.visible = false
+
+			if not layer_maker.visible:
+				layer_maker.visible = true
+
+			if layer_skills.visible:
+				layer_skills.visible = false
+
+
+func _on_icon_skills_gui_input(event: InputEvent):
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index == 1:
+			startmenu.visible = false
+
+			if not layer_skills.visible:
+				layer_skills.visible = true
+
+			if layer_maker.visible:
+				layer_maker.visible = false
+
+
+func _on_icon_maker_mouse_entered():
+	icon_maker.color.a = 0.25
+
+
+func _on_icon_maker_mouse_exited():
+	icon_maker.color.a = 0.0
+
+
+func _on_icon_skills_mouse_entered():
+	icon_skills.color.a = 0.25
+
+
+func _on_icon_skills_mouse_exited():
+	icon_skills.color.a = 0.0
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_x4fcx"]
+line_spacing = 0.0
+font_size = 18
+
+[sub_resource type="GDScript" id="GDScript_invqd"]
+resource_name = "window_maker"
+script/source = "extends CanvasLayer
+
+var _player: Player = Global.player
+
+var make_progressbar: ProgressBar
+var gamelist: VBoxContainer
+var btn_make: Button
+
+
+func _ready():
+	make_progressbar = $Window/Container/List/Buttons/Make/ProgressBar
+	gamelist = $Window/Container/List/ScrollContainer/Games
+	btn_make = $Window/Container/List/Buttons/Make
+
+	make_progressbar.visible = false
+
+
+func _process(_delta: float):
+	var last_game = _player.get_last_game()
+
+	if last_game:
+		# Update \"Make a Game\" button in Make window
+		btn_make.get_node(\"ProgressBar\").value = last_game.finished_at
+		if last_game.finished:
+			btn_make.disabled = false
+			btn_make.get_node(\"ProgressBar\").visible = false
+		else:
+			btn_make.disabled = true
+			btn_make.get_node(\"ProgressBar\").visible = true
+
+	# Update game items in games list
+	for game in _player.games:
+		var item: Panel = gamelist.get_node_or_null(\"GameItem{i}\".format({\"i\": game.id}))
+		if item:
+			var state_text: String
+			if game.finished:
+				state_text = \"Downloads: {dc}\".format({\"dc\": game.downloads})
+			else:
+				state_text = \"Making, finished at {v}%...\".format({\"v\": round(game.finished_at)})
+			item.get_node(\"State\").text = state_text
+
+
+func _on_close_gui_input(event: InputEvent):
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index == 1:
+			if self.visible:
+				self.visible = false
+
+
+func _on_make_pressed():
+	$Window/Container/Details._clear()
+	$Window/Container/List.visible = false
+	$Window/Container/Details.visible = true
+"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ucnxe"]
+bg_color = Color(0.12549, 0.12549, 0.25098, 0.815686)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xsqov"]
+bg_color = Color(0.25098, 0.25098, 0.627451, 0.501961)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7icpj"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g6x3g"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.0627451, 0.0627451, 0.12549, 0.752941)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m7px8"]
+bg_color = Color(0.188235, 0.188235, 0.376471, 0.376471)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_sot4e"]
+line_spacing = 0.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_xbghc"]
+line_spacing = 0.0
+font_size = 12
+font_color = Color(0.752941, 0.752941, 0.752941, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_82hm7"]
+bg_color = Color(0.352941, 0.941176, 0.564706, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 4
+
+[sub_resource type="GDScript" id="GDScript_d2mrp"]
+resource_name = "maker_details"
+script/source = "extends Panel
+
+var _player: Player = Global.player
+
+var input_name: LineEdit
+var text_error: Label
+var view_list: Panel
+var gamelist: VBoxContainer
+var gamelist_item: Panel
+var option_genre: OptionButton
+
+
+func _ready():
+	text_error = $VBox/Error
+	input_name = $VBox/FieldName/Text
+	option_genre = $VBox/FieldGenre/Genre
+
+	# Get nodes
+	view_list = get_node(\"../List\")
+	gamelist = view_list.get_node(\"ScrollContainer/Games\")
+	gamelist_item = gamelist.get_node(\"GameItem0\")
+
+
+func _close():
+	self.visible = false
+	view_list.visible = true
+	self._clear()
+
+
+func _clear():
+	text_error.text = \"\"
+	input_name.clear()
+	option_genre.selected = -1
+
+
+func _on_make_done_pressed():
+	var game_name: String = input_name.text
+
+	if not game_name:
+		text_error.text = \"Please, type game name!\"
+		return
+
+	if option_genre.selected < 0:
+		text_error.text = \"Please, select game genre!\"
+		return
+
+	# Append new game to player object
+	_player.add_game(game_name, option_genre.selected)
+
+	# Append also on ListGames
+	var gameitem: Panel = gamelist_item.duplicate()
+	gameitem.name = \"GameItem{i}\".format({\"i\": _player.game_counter})
+	gameitem.visible = true
+	gameitem.get_node(\"Name\").text = game_name
+	gamelist.add_child(gameitem)
+
+	self._close()
+
+
+func _on_visibility_changed():
+	# Fill genre options
+	option_genre.clear()
+	option_genre.add_item(\"Free\")
+	if _player.skills.able_ads:
+		option_genre.add_item(\"Free with Ads\")
+	if _player.skills.able_p2w:
+		option_genre.add_item(\"Free with P2W\")
+	if _player.skills.able_paid:
+		option_genre.add_item(\"Paid\")
+
+
+func _on_make_cancel_pressed():
+	self._close()
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_gosub"]
+font_size = 52
+
+[sub_resource type="LabelSettings" id="LabelSettings_mbfgn"]
+font_color = Color(1, 0.376471, 0.376471, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_toib7"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_lujhq"]
+font_size = 20
+
+[sub_resource type="GDScript" id="GDScript_cs51p"]
+resource_name = "window_skills"
+script/source = "extends CanvasLayer
+
+var _player: Player = Global.player
+
+@onready var _title: Label = $Window/Container/Content/Title
+@onready var _list: VBoxContainer = $Window/Container/Content/ScrollContainer/Skills
+@onready var _se_learned: AudioStreamPlayer = $SELearned
+
+
+func _ready():
+	pass
+
+
+func _process(_delta: float):
+	# Update title text in Skills window
+	_title.text = \"You have {e} experience.\".format({\"e\": _player.experience})
+
+	# Update skills buttons
+	var skill_1: Button = _list.get_node(\"Skill1/VBox/Claim\")
+	var skill_2: Button = _list.get_node(\"Skill2/VBox/Claim\")
+	var skill_3: Button = _list.get_node(\"Skill3/VBox/Claim\")
+
+	if _player.experience >= 3 and not _player.skills.able_ads:
+		skill_1.disabled = false
+
+	if _player.experience >= 12 and not _player.skills.able_p2w:
+		skill_2.disabled = false
+
+	if _player.experience >= 28 and not _player.skills.able_paid:
+		skill_3.disabled = false
+
+	if _player.skills.able_ads:
+		skill_1.text = \"Learned!\"
+		skill_1.disabled = true
+
+	if _player.skills.able_p2w:
+		skill_2.text = \"Learned!\"
+		skill_2.disabled = true
+
+	if _player.skills.able_paid:
+		skill_3.text = \"Learned!\"
+		skill_1.disabled = true
+
+
+func _on_close_gui_input(event: InputEvent):
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index == 1:
+			if self.visible:
+				self.visible = false
+
+
+func _on_skill1_claim_pressed():
+	_player.skills.able_ads = true
+	_se_learned.play()
+
+
+func _on_skill2_claim_pressed():
+	_player.skills.able_p2w = true
+	_se_learned.play()
+
+
+func _on_skill3_claim_pressed():
+	_player.skills.able_paid = true
+	_se_learned.play()
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_5wphe"]
+line_spacing = 0.0
+font_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6kijy"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.0627451, 0.0627451, 0.12549, 0.752941)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_up6cj"]
+bg_color = Color(0.25098, 0.25098, 0.752941, 0.501961)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_oxdrh"]
+line_spacing = 0.0
+font_size = 18
+
+[sub_resource type="LabelSettings" id="LabelSettings_ypcig"]
+line_spacing = 0.0
+font_size = 14
+font_color = Color(0.752941, 0.752941, 0.752941, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_cot8y"]
+line_spacing = 0.0
+font_size = 14
+font_color = Color(0.627451, 0.627451, 0.878431, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85rao"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.627451, 0.627451, 0.627451, 0.752941)
+corner_radius_top_right = 10
+
+[sub_resource type="GDScript" id="GDScript_7j1uu"]
+resource_name = "startmenu"
+script/source = "extends Panel
+
+var _player: Player = Global.player
+
+var name_text: Label
+var status_text: Label
+var energy_bar: ProgressBar
+var mental_health_bar: ProgressBar
+
+
+func _ready():
+	name_text = $Title/VBox/Name
+	status_text = $Title/VBox/Status
+	energy_bar = $Content/Stats/VBox/EnergyBar
+	mental_health_bar = $Content/Stats/VBox/MentalHealthBar
+
+
+func _process(_delta):
+	if not self.visible:
+		return
+
+	# Update top of the menu
+	name_text.text = _player.player_name
+	status_text.text = \"${money} | Exp.: {xp}\".format({
+		\"money\": _player.money,
+		\"xp\": _player.experience
+	})
+
+	# Update bars
+	energy_bar.value = _player.energy
+	mental_health_bar.value = _player.mental_health
+
+
+func _on_store_pressed():
+	self.visible = false
+	# TODO: Finish this button work
+
+
+func _on_shutdown_pressed():
+	self.visible = false
+	get_node(\"../..\")._skip_day()
+"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_svjve"]
+bg_color = Color(0.188235, 0.188235, 0.188235, 1)
+corner_radius_top_right = 10
+
+[sub_resource type="LabelSettings" id="LabelSettings_ilr8f"]
+line_spacing = 0.0
+font_size = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_b46sc"]
+line_spacing = 0.0
+font_size = 14
+font_color = Color(0.752941, 0.752941, 0.752941, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3cvg0"]
+bg_color = Color(0.25098, 0.25098, 0.25098, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_1o7b4"]
+line_spacing = 0.0
+font_color = Color(0.752941, 0.752941, 0.752941, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h4fd4"]
+bg_color = Color(0.188235, 0.188235, 0.188235, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_neykd"]
+bg_color = Color(0.917647, 0.415686, 0.729412, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g1o4r"]
+bg_color = Color(0.12549, 0.752941, 0.627451, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="LabelSettings" id="LabelSettings_srt5f"]
+line_spacing = 0.0
+font_size = 12
+font_color = Color(0.627451, 0.627451, 0.627451, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_y5phb"]
+line_spacing = 0.0
+font_size = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lpgcm"]
+bg_color = Color(0.188235, 0.188235, 0.188235, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_egoey"]
+bg_color = Color(0.501961, 0.501961, 0.501961, 0.752941)
+
+[sub_resource type="GDScript" id="GDScript_r8u00"]
+resource_name = "taskbar"
+script/source = "extends Panel
+
+var _player: Player = Global.player
+
+var startmenu: Panel
+var time_text: Label
+
+
+func _ready():
+	startmenu = get_node(\"../StartMenu\")
+	time_text = $Right/Time
+
+
+func _process(_delta):
+	time_text.text = \"{time}\\nDay {day}\".format({
+		\"time\": _player.get_day_time_string(),
+		\"day\": _player.get_day_count()
+	})
+
+	if _player.havent_sleep:
+		time_text.modulate = Color(1.0, 0.6, 0.6)
+	elif _player.day.time >= 1320:
+		time_text.modulate = Color(1.0, 0.7, 0.7)
+	elif _player.day.time >= 1200:
+		time_text.modulate = Color(1.0, 0.8, 0.8)
+	else:
+		time_text.modulate = Color(1.0, 1.0, 1.0)
+
+
+func _on_start_pressed():
+	if not startmenu.visible:
+		startmenu.visible = true
+	else:
+		startmenu.visible = false
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_lbean"]
+line_spacing = 0.0
+
+[sub_resource type="GDScript" id="GDScript_ihpjx"]
+resource_name = "layer_new_player"
+script/source = "extends CanvasLayer
+
+var player: Player = Global.player
+
+@onready var input_player_name: LineEdit = $VBox/FieldName/Text
+@onready var text_error: Label = $VBox/Error
+@onready var btn_done: Button = $VBox/Buttons/Done
+
+
+func _ready():
+	pass
+
+
+func _clear():
+	input_player_name.clear()
+	text_error.text = \"\"
+
+
+func _on_name_text_changed(new_text: String):
+	if not new_text or len(new_text) < 2:
+		btn_done.disabled = true
+	else:
+		btn_done.disabled = false
+
+
+func _on_done_pressed():
+	var player_name: String = input_player_name.text
+
+	if not player_name:
+		text_error.text = \"Please, type player name!\"
+		return
+
+	# TODO: special names handling, just for fun :)
+
+	# Set out values
+	player.player_name = player_name
+	player.set_day_paused(false)
+
+	# Clean up
+	self.visible = false
+	self._clear()
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_mhsqq"]
+line_spacing = 0.0
+font_size = 48
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_xmuun"]
+font_size = 20
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cl14a"]
+
+[sub_resource type="GDScript" id="GDScript_drg8n"]
+resource_name = "layer_day"
+script/source = "extends CanvasLayer
+
+var _player: Player = Global.player
+var _timer: float = 0.0
+
+@onready var _bg: ColorRect = $Background
+@onready var _text: Label = $CenterContainer/Text
+
+
+func _process(delta: float):
+	if visible:
+		_timer += delta
+
+		if _timer >= 2.0:
+			# Fade in
+			_bg.modulate.a -= delta
+			_text.modulate.a -= delta
+
+			if _bg.modulate.a <= 0.0:
+				visible = false
+				_player.set_day_paused(false)
+
+
+func _on_visibility_changed():
+	if visible:
+		# Update text and color
+		_text.text = \"Day {d}\".format({\"d\": _player.get_day_count()})
+
+		match _player.get_day_count():
+			5:
+				_text.modulate = Color(1.0, 0.8, 0.8)
+			6:
+				_text.modulate = Color(1.0, 0.6, 0.6)
+			7:
+				_text.modulate = Color(1.0, 0.4, 0.4)
+			_:
+				_text.modulate = Color(1.0, 1.0, 1.0)
+	else:
+		# Reset to defaults
+		_bg.modulate.a = 1.0
+		_text.modulate.a = 1.0
+		_timer = 0.0
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_5pyv1"]
+line_spacing = 0.0
+font_size = 80
+outline_size = 12
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="GDScript" id="GDScript_sgwbg"]
+resource_name = "layer_confirm"
+script/source = "extends CanvasLayer
+
+var _player: Player = Global.player
+
+
+func _on_visibility_changed():
+	if self.visible:
+		_player.set_day_paused(true)
+	else:
+		_player.set_day_paused(false)
+
+
+func _on_no_pressed():
+	self.visible = false
+
+
+func _on_yes_pressed():
+	self.visible = false
+	get_node(\"../../..\").fade_in = true
+"
+
+[node name="SceneGame" type="Node2D"]
+script = ExtResource("1_rnpc1")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Background" type="TextureRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_t0s2q")
+expand_mode = 5
+stretch_mode = 6
+
+[node name="DebugText" type="RichTextLabel" parent="CanvasLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 131.0
+offset_right = -143.0
+offset_bottom = -48.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/normal_font_size = 12
+theme_override_font_sizes/bold_font_size = 12
+theme_override_font_sizes/italics_font_size = 12
+theme_override_font_sizes/bold_italics_font_size = 12
+theme_override_font_sizes/mono_font_size = 12
+bbcode_enabled = true
+script = SubResource("GDScript_am1vl")
+
+[node name="IconsLeft" type="GridContainer" parent="CanvasLayer"]
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 111.0
+offset_bottom = 222.0
+theme_override_constants/h_separation = 15
+theme_override_constants/v_separation = 15
+script = SubResource("GDScript_7i8og")
+
+[node name="IconMaker" type="ColorRect" parent="CanvasLayer/IconsLeft"]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+color = Color(0.501961, 0.501961, 0.941176, 0)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/IconsLeft/IconMaker"]
+layout_mode = 0
+offset_right = 95.0
+offset_bottom = 96.0
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HBoxIcon" type="HBoxContainer" parent="CanvasLayer/IconsLeft/IconMaker/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/IconsLeft/IconMaker/VBoxContainer/HBoxIcon"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture = ExtResource("3_sqklt")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/IconsLeft/IconMaker/VBoxContainer"]
+layout_mode = 2
+text = "Godot.exe"
+label_settings = SubResource("LabelSettings_x4fcx")
+horizontal_alignment = 1
+
+[node name="IconSkills" type="ColorRect" parent="CanvasLayer/IconsLeft"]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+color = Color(0.501961, 0.501961, 0.941176, 0)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/IconsLeft/IconSkills"]
+layout_mode = 0
+offset_right = 95.0
+offset_bottom = 96.0
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="HBoxIcon" type="HBoxContainer" parent="CanvasLayer/IconsLeft/IconSkills/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/IconsLeft/IconSkills/VBoxContainer/HBoxIcon"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture = ExtResource("4_yloah")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/IconsLeft/IconSkills/VBoxContainer"]
+layout_mode = 2
+text = "Dev Skill"
+label_settings = SubResource("LabelSettings_x4fcx")
+horizontal_alignment = 1
+
+[node name="GroupWindows" type="CanvasGroup" parent="CanvasLayer"]
+z_index = 50
+
+[node name="LayerMaker" type="CanvasLayer" parent="CanvasLayer/GroupWindows"]
+visible = false
+script = SubResource("GDScript_invqd")
+
+[node name="Window" type="PanelContainer" parent="CanvasLayer/GroupWindows/LayerMaker"]
+custom_minimum_size = Vector2(600, 300)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 171.0
+offset_top = 50.0
+offset_right = -173.0
+offset_bottom = -106.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ucnxe")
+
+[node name="Container" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window"]
+layout_mode = 2
+
+[node name="TitleBar" type="Panel" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xsqov")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/TitleBar"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 10.0
+offset_top = -11.5
+offset_right = 329.0
+offset_bottom = 11.5
+grow_vertical = 2
+text = "Godot.exe - Build Your Future Right Here!"
+vertical_alignment = 1
+
+[node name="Close" type="TextureRect" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/TitleBar"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -28.0
+offset_top = -8.0
+offset_right = -12.0
+offset_bottom = 8.0
+grow_horizontal = 0
+grow_vertical = 2
+texture = ExtResource("5_pv4fn")
+expand_mode = 1
+
+[node name="List" type="Panel" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_7icpj")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 9.0
+offset_top = 33.0
+offset_right = -9.0
+offset_bottom = -55.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_g6x3g")
+
+[node name="Games" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="GameItem0" type="Panel" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/ScrollContainer/Games"]
+visible = false
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_m7px8")
+
+[node name="Name" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/ScrollContainer/Games/GameItem0"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -5.0
+offset_bottom = 27.0
+grow_horizontal = 2
+text = "#1: SomeGameName"
+label_settings = SubResource("LabelSettings_sot4e")
+
+[node name="State" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/ScrollContainer/Games/GameItem0"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -21.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Some game status goes here...?"
+label_settings = SubResource("LabelSettings_xbghc")
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = -46.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+
+[node name="Make" type="Button" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/Buttons"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+focus_mode = 0
+text = "Make a Game"
+
+[node name="ProgressBar" type="ProgressBar" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/Buttons/Make"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/fill = SubResource("StyleBoxFlat_82hm7")
+step = 0.001
+show_percentage = false
+
+[node name="Map" type="Button" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/Buttons"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "World Map"
+
+[node name="Details" type="Panel" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container"]
+visible = false
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_7icpj")
+script = SubResource("GDScript_d2mrp")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -68.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox"]
+layout_mode = 2
+text = "Making a Game..."
+label_settings = SubResource("LabelSettings_gosub")
+horizontal_alignment = 1
+
+[node name="Error" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox"]
+layout_mode = 2
+text = "Some error text goes here..."
+label_settings = SubResource("LabelSettings_mbfgn")
+horizontal_alignment = 1
+
+[node name="HSep1" type="HSeparator" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_toib7")
+
+[node name="FieldName" type="HBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox/FieldName"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Your game name is:"
+label_settings = SubResource("LabelSettings_lujhq")
+horizontal_alignment = 2
+
+[node name="Text" type="LineEdit" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox/FieldName"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+placeholder_text = "Game Name..."
+max_length = 30
+clear_button_enabled = true
+
+[node name="FieldGenre" type="HBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox/FieldGenre"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Genre of game:"
+label_settings = SubResource("LabelSettings_lujhq")
+horizontal_alignment = 2
+
+[node name="Genre" type="OptionButton" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox/FieldGenre"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -50.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Done" type="Button" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/HBox"]
+custom_minimum_size = Vector2(140, 38)
+layout_mode = 2
+focus_mode = 0
+shortcut_feedback = false
+shortcut_in_tooltip = false
+text = "Make!"
+
+[node name="Cancel" type="Button" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/HBox"]
+custom_minimum_size = Vector2(140, 38)
+layout_mode = 2
+focus_mode = 0
+text = "Cancel"
+
+[node name="LayerSkills" type="CanvasLayer" parent="CanvasLayer/GroupWindows"]
+visible = false
+script = SubResource("GDScript_cs51p")
+
+[node name="Window" type="PanelContainer" parent="CanvasLayer/GroupWindows/LayerSkills"]
+custom_minimum_size = Vector2(600, 300)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 171.0
+offset_top = 50.0
+offset_right = -173.0
+offset_bottom = -106.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ucnxe")
+
+[node name="Container" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window"]
+layout_mode = 2
+
+[node name="TitleBar" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xsqov")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/TitleBar"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 10.0
+offset_top = -11.5
+offset_right = 329.0
+offset_bottom = 11.5
+grow_vertical = 2
+text = "Dev Skill"
+vertical_alignment = 1
+
+[node name="Close" type="TextureRect" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/TitleBar"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -28.0
+offset_top = -8.0
+offset_right = -12.0
+offset_bottom = 8.0
+grow_horizontal = 0
+grow_vertical = 2
+texture = ExtResource("5_pv4fn")
+expand_mode = 1
+
+[node name="Content" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_7icpj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -111.5
+offset_top = 4.0
+offset_right = 111.5
+offset_bottom = 32.0
+grow_horizontal = 2
+text = "You have 0 experience."
+label_settings = SubResource("LabelSettings_5wphe")
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 36.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_6kijy")
+
+[node name="Skills" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="Skill1" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills"]
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_up6cj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill1"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -134.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Ability to make Ads in Game"
+label_settings = SubResource("LabelSettings_oxdrh")
+
+[node name="Description" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill1"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -44.0
+offset_right = -128.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "This skill teaches to you make ads in your games.
+\"Time to annoy people!\""
+label_settings = SubResource("LabelSettings_ypcig")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill1"]
+custom_minimum_size = Vector2(100, 64)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -108.0
+offset_top = -37.0
+offset_right = -8.0
+offset_bottom = 35.0
+grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+
+[node name="Claim" type="Button" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill1/VBox"]
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Learn"
+
+[node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill1/VBox"]
+layout_mode = 2
+text = "Cost: 3 Exp"
+label_settings = SubResource("LabelSettings_cot8y")
+horizontal_alignment = 1
+
+[node name="Skill2" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills"]
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_up6cj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill2"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -134.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Ability to make Microtransactions"
+label_settings = SubResource("LabelSettings_oxdrh")
+
+[node name="Description" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill2"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -44.0
+offset_right = -128.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "This skill teaches to you make microtransactions in your games.
+\"Would be ruin player experience?\""
+label_settings = SubResource("LabelSettings_ypcig")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill2"]
+custom_minimum_size = Vector2(100, 64)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -37.0
+offset_right = -8.0
+offset_bottom = 35.0
+grow_horizontal = 0
+grow_vertical = 2
+scale = Vector2(1.00722, 1.02137)
+alignment = 1
+
+[node name="Claim" type="Button" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill2/VBox"]
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Learn"
+
+[node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill2/VBox"]
+layout_mode = 2
+text = "Cost: 10 Exp"
+label_settings = SubResource("LabelSettings_cot8y")
+horizontal_alignment = 1
+
+[node name="Skill3" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills"]
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_up6cj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill3"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -134.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Ability to make Paid Games"
+label_settings = SubResource("LabelSettings_oxdrh")
+
+[node name="Description" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill3"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -44.0
+offset_right = -128.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "This skill teaches to you make paid games.
+\"First step to actually earn money!\""
+label_settings = SubResource("LabelSettings_ypcig")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill3"]
+custom_minimum_size = Vector2(100, 64)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -108.0
+offset_top = -37.0
+offset_right = -8.0
+offset_bottom = 35.0
+grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+
+[node name="Claim" type="Button" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill3/VBox"]
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Learn"
+
+[node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill3/VBox"]
+layout_mode = 2
+text = "Cost: 25 Exp"
+label_settings = SubResource("LabelSettings_cot8y")
+horizontal_alignment = 1
+
+[node name="SELearned" type="AudioStreamPlayer" parent="CanvasLayer/GroupWindows/LayerSkills"]
+stream = ExtResource("6_n00jc")
+volume_db = -10.0
+mix_target = 2
+
+[node name="StartMenu" type="Panel" parent="CanvasLayer"]
+visible = false
+custom_minimum_size = Vector2(250, 300)
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -348.0
+offset_right = 300.0
+offset_bottom = -48.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_85rao")
+script = SubResource("GDScript_7j1uu")
+
+[node name="Title" type="Panel" parent="CanvasLayer/StartMenu"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_svjve")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/StartMenu/Title"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 0
+offset_left = 10.0
+offset_top = 15.0
+offset_right = 42.0
+offset_bottom = 47.0
+texture = ExtResource("5_whxx8")
+expand_mode = 1
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/StartMenu/Title"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 55.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Name" type="Label" parent="CanvasLayer/StartMenu/Title/VBox"]
+layout_mode = 2
+text = "PlayerName"
+label_settings = SubResource("LabelSettings_ilr8f")
+vertical_alignment = 1
+
+[node name="Status" type="Label" parent="CanvasLayer/StartMenu/Title/VBox"]
+layout_mode = 2
+text = "$50 | Exp: 0/5"
+label_settings = SubResource("LabelSettings_b46sc")
+
+[node name="Content" type="VBoxContainer" parent="CanvasLayer/StartMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 67.0
+offset_right = -5.0
+offset_bottom = -43.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="Stats" type="Panel" parent="CanvasLayer/StartMenu/Content"]
+custom_minimum_size = Vector2(150, 98)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_3cvg0")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/StartMenu/Content/Stats"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 3.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="LabelMentalHealth" type="Label" parent="CanvasLayer/StartMenu/Content/Stats/VBox"]
+layout_mode = 2
+text = "Mental Health:"
+label_settings = SubResource("LabelSettings_1o7b4")
+
+[node name="MentalHealthBar" type="ProgressBar" parent="CanvasLayer/StartMenu/Content/Stats/VBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_h4fd4")
+theme_override_styles/fill = SubResource("StyleBoxFlat_neykd")
+step = 0.001
+value = 50.0
+show_percentage = false
+
+[node name="LabelEnergy" type="Label" parent="CanvasLayer/StartMenu/Content/Stats/VBox"]
+layout_mode = 2
+text = "Energy:"
+label_settings = SubResource("LabelSettings_1o7b4")
+
+[node name="EnergyBar" type="ProgressBar" parent="CanvasLayer/StartMenu/Content/Stats/VBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_h4fd4")
+theme_override_styles/fill = SubResource("StyleBoxFlat_g1o4r")
+step = 0.001
+value = 50.0
+show_percentage = false
+
+[node name="Event" type="Panel" parent="CanvasLayer/StartMenu/Content"]
+visible = false
+custom_minimum_size = Vector2(150, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_3cvg0")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/StartMenu/Content/Event"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 2.0
+offset_right = -6.0
+offset_bottom = -3.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/StartMenu/Content/Event/VBox"]
+layout_mode = 2
+text = "Current event is..."
+label_settings = SubResource("LabelSettings_srt5f")
+
+[node name="Label" type="Label" parent="CanvasLayer/StartMenu/Content/Event/VBox"]
+layout_mode = 2
+text = "None"
+label_settings = SubResource("LabelSettings_y5phb")
+horizontal_alignment = 1
+
+[node name="Bottom" type="Panel" parent="CanvasLayer/StartMenu"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -38.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_lpgcm")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/StartMenu/Bottom"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 3.0
+offset_right = -4.0
+offset_bottom = -3.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 2
+
+[node name="Store" type="Button" parent="CanvasLayer/StartMenu/Bottom/HBox"]
+visible = false
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+focus_mode = 0
+text = "Store"
+
+[node name="Shutdown" type="Button" parent="CanvasLayer/StartMenu/Bottom/HBox"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+tooltip_text = "Skips to the next day and restore some energy."
+focus_mode = 0
+text = "Shutdown"
+
+[node name="Taskbar" type="Panel" parent="CanvasLayer"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -48.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_egoey")
+script = SubResource("GDScript_r8u00")
+
+[node name="Left" type="HBoxContainer" parent="CanvasLayer/Taskbar"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 5.0
+offset_top = -19.0
+offset_right = 43.0
+offset_bottom = 19.0
+grow_vertical = 2
+theme_override_constants/separation = 5
+
+[node name="Start" type="TextureButton" parent="CanvasLayer/Taskbar/Left"]
+custom_minimum_size = Vector2(38, 38)
+layout_mode = 2
+texture_normal = ExtResource("3_nsn3f")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="Right" type="HBoxContainer" parent="CanvasLayer/Taskbar"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -85.0
+offset_top = -23.0
+offset_right = -5.0
+offset_bottom = 23.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/separation = 5
+alignment = 2
+
+[node name="Time" type="Label" parent="CanvasLayer/Taskbar/Right"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "07:30
+Day 1"
+label_settings = SubResource("LabelSettings_lbean")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="GroupModals" type="CanvasGroup" parent="CanvasLayer"]
+z_index = 100
+
+[node name="NewPlayerLayer" type="CanvasLayer" parent="CanvasLayer/GroupModals"]
+visible = false
+script = SubResource("GDScript_ihpjx")
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/GroupModals/NewPlayerLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12549, 0.12549, 0.25098, 0.752941)
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupModals/NewPlayerLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox"]
+layout_mode = 2
+text = "New Game - New Player!"
+label_settings = SubResource("LabelSettings_mhsqq")
+horizontal_alignment = 1
+
+[node name="HSep1" type="HSeparator" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_toib7")
+
+[node name="FieldName" type="HBoxContainer" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox/FieldName"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "Player name:"
+label_settings = SubResource("LabelSettings_xmuun")
+horizontal_alignment = 2
+
+[node name="Text" type="LineEdit" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox/FieldName"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+placeholder_text = "EpicGamer7"
+max_length = 20
+
+[node name="Error" type="Label" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox"]
+layout_mode = 2
+label_settings = SubResource("LabelSettings_mbfgn")
+horizontal_alignment = 1
+
+[node name="HSep2" type="HSeparator" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_cl14a")
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Done" type="Button" parent="CanvasLayer/GroupModals/NewPlayerLayer/VBox/Buttons"]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Create new player!
+"
+
+[node name="DayLayer" type="CanvasLayer" parent="CanvasLayer/GroupModals"]
+visible = false
+script = SubResource("GDScript_drg8n")
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/GroupModals/DayLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.752941)
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer/GroupModals/DayLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Text" type="Label" parent="CanvasLayer/GroupModals/DayLayer/CenterContainer"]
+layout_mode = 2
+text = "Day 1"
+label_settings = SubResource("LabelSettings_5pyv1")
+horizontal_alignment = 1
+
+[node name="ConfirmLayer" type="CanvasLayer" parent="CanvasLayer/GroupModals"]
+visible = false
+script = SubResource("GDScript_sgwbg")
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/GroupModals/ConfirmLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12549, 0.12549, 0.25098, 0.752941)
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupModals/ConfirmLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox"]
+layout_mode = 2
+text = "Are you sure?"
+label_settings = SubResource("LabelSettings_mhsqq")
+horizontal_alignment = 1
+
+[node name="HSep1" type="HSeparator" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_toib7")
+
+[node name="Label" type="Label" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "Do you still want to skip the whole day?"
+label_settings = SubResource("LabelSettings_xmuun")
+horizontal_alignment = 1
+
+[node name="HSep2" type="HSeparator" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_cl14a")
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="No" type="Button" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox/Buttons"]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+focus_mode = 0
+text = "Nope!"
+
+[node name="Yes" type="Button" parent="CanvasLayer/GroupModals/ConfirmLayer/VBox/Buttons"]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+focus_mode = 0
+text = "Yeah!"
+
+[node name="PauseLayer" type="CanvasLayer" parent="CanvasLayer/GroupModals"]
+visible = false
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/GroupModals/PauseLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.752941)
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer/GroupModals/PauseLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Text" type="Label" parent="CanvasLayer/GroupModals/PauseLayer/CenterContainer"]
+layout_mode = 2
+text = "Paused"
+label_settings = SubResource("LabelSettings_5pyv1")
+
+[node name="Fader" type="ColorRect" parent="CanvasLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[connection signal="gui_input" from="CanvasLayer/IconsLeft/IconMaker" to="CanvasLayer/IconsLeft" method="_on_icon_maker_gui_input"]
+[connection signal="mouse_entered" from="CanvasLayer/IconsLeft/IconMaker" to="CanvasLayer/IconsLeft" method="_on_icon_maker_mouse_entered"]
+[connection signal="mouse_exited" from="CanvasLayer/IconsLeft/IconMaker" to="CanvasLayer/IconsLeft" method="_on_icon_maker_mouse_exited"]
+[connection signal="gui_input" from="CanvasLayer/IconsLeft/IconSkills" to="CanvasLayer/IconsLeft" method="_on_icon_skills_gui_input"]
+[connection signal="mouse_entered" from="CanvasLayer/IconsLeft/IconSkills" to="CanvasLayer/IconsLeft" method="_on_icon_skills_mouse_entered"]
+[connection signal="mouse_exited" from="CanvasLayer/IconsLeft/IconSkills" to="CanvasLayer/IconsLeft" method="_on_icon_skills_mouse_exited"]
+[connection signal="gui_input" from="CanvasLayer/GroupWindows/LayerMaker/Window/Container/TitleBar/Close" to="CanvasLayer/GroupWindows/LayerMaker" method="_on_close_gui_input"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List/Buttons/Make" to="CanvasLayer/GroupWindows/LayerMaker" method="_on_make_pressed"]
+[connection signal="visibility_changed" from="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details" to="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details" method="_on_visibility_changed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/HBox/Done" to="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details" method="_on_make_done_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/HBox/Cancel" to="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details" method="_on_make_cancel_pressed"]
+[connection signal="gui_input" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/TitleBar/Close" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_close_gui_input"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill1/VBox/Claim" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_skill1_claim_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill2/VBox/Claim" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_skill2_claim_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/ScrollContainer/Skills/Skill3/VBox/Claim" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_skill3_claim_pressed"]
+[connection signal="pressed" from="CanvasLayer/StartMenu/Bottom/HBox/Store" to="CanvasLayer/StartMenu" method="_on_store_pressed"]
+[connection signal="pressed" from="CanvasLayer/StartMenu/Bottom/HBox/Shutdown" to="CanvasLayer/StartMenu" method="_on_shutdown_pressed"]
+[connection signal="pressed" from="CanvasLayer/Taskbar/Left/Start" to="CanvasLayer/Taskbar" method="_on_start_pressed"]
+[connection signal="text_changed" from="CanvasLayer/GroupModals/NewPlayerLayer/VBox/FieldName/Text" to="CanvasLayer/GroupModals/NewPlayerLayer" method="_on_name_text_changed"]
+[connection signal="pressed" from="CanvasLayer/GroupModals/NewPlayerLayer/VBox/Buttons/Done" to="CanvasLayer/GroupModals/NewPlayerLayer" method="_on_done_pressed"]
+[connection signal="visibility_changed" from="CanvasLayer/GroupModals/DayLayer" to="CanvasLayer/GroupModals/DayLayer" method="_on_visibility_changed"]
+[connection signal="visibility_changed" from="CanvasLayer/GroupModals/ConfirmLayer" to="CanvasLayer/GroupModals/ConfirmLayer" method="_on_visibility_changed"]
+[connection signal="pressed" from="CanvasLayer/GroupModals/ConfirmLayer/VBox/Buttons/No" to="CanvasLayer/GroupModals/ConfirmLayer" method="_on_no_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupModals/ConfirmLayer/VBox/Buttons/Yes" to="CanvasLayer/GroupModals/ConfirmLayer" method="_on_yes_pressed"]

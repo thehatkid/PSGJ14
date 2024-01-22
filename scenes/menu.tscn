@@ -1,0 +1,133 @@
+[gd_scene load_steps=4 format=3 uid="uid://jtdla6lbv82p"]
+
+[ext_resource type="Texture2D" uid="uid://dwkeu7bxtqdy3" path="res://resources/sprites/title.png" id="2_i4mup"]
+
+[sub_resource type="GDScript" id="GDScript_426d1"]
+resource_name = "menu"
+script/source = "extends Node2D
+
+var fade_out: bool = false
+var fade_in: bool = false
+var game: bool = false
+var quit: bool = false
+
+@onready var fader: ColorRect = $CanvasLayer/Fader
+
+
+func _ready():
+	fader.visible = true
+	fader.color.a = 1.0
+
+	# Remove \"Quit\" button from menu if it's Web port
+	if Global.is_web:
+		$CanvasLayer/Container/VBox/Buttons/Quit.queue_free()
+
+	fade_out = true
+
+
+func _process(delta: float):
+	if fade_out:
+		fader.color.a -= delta * 2.0
+		if fader.color.a <= 0.0:
+			fader.color.a = 0.0
+			fader.visible = false
+			fade_out = false
+
+	if fade_in:
+		fader.visible = true
+		fader.color.a += delta * 2.0
+		if fader.color.a >= 1.0:
+			fader.color.a = 1.0
+			fade_in = false
+
+			if game:
+				get_tree().change_scene_to_file(\"res://scenes/game.tscn\")
+
+			if quit:
+				get_tree().quit()
+
+
+func _on_load_pressed():
+	# TODO: Make button function and Save & Load feature
+	pass
+
+
+func _on_start_pressed():
+	fade_in = true
+	game = true
+
+
+func _on_quit_pressed():
+	fade_in = true
+	quit = true
+"
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_x0bhv"]
+
+[node name="SceneMenu" type="Node2D"]
+script = SubResource("GDScript_426d1")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Background" type="ColorRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.168627, 0.121569, 0.368627, 1)
+
+[node name="Container" type="HBoxContainer" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/Container"]
+layout_mode = 2
+alignment = 1
+
+[node name="Title" type="TextureRect" parent="CanvasLayer/Container/VBox"]
+layout_mode = 2
+texture = ExtResource("2_i4mup")
+
+[node name="HSep1" type="HSeparator" parent="CanvasLayer/Container/VBox"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_x0bhv")
+
+[node name="Buttons" type="VBoxContainer" parent="CanvasLayer/Container/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Load" type="Button" parent="CanvasLayer/Container/VBox/Buttons"]
+visible = false
+custom_minimum_size = Vector2(120, 48)
+layout_mode = 2
+disabled = true
+text = "Load the Saved Game"
+
+[node name="Start" type="Button" parent="CanvasLayer/Container/VBox/Buttons"]
+custom_minimum_size = Vector2(120, 48)
+layout_mode = 2
+text = "Start New Game"
+
+[node name="Quit" type="Button" parent="CanvasLayer/Container/VBox/Buttons"]
+custom_minimum_size = Vector2(120, 48)
+layout_mode = 2
+text = "Quit the Game"
+
+[node name="Fader" type="ColorRect" parent="CanvasLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Load" to="." method="_on_load_pressed"]
+[connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Start" to="." method="_on_start_pressed"]
+[connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Quit" to="." method="_on_quit_pressed"]
