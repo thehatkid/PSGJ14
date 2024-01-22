@@ -2,5 +2,8 @@
 .godot/
 *.tmp
 
+# Export directory
+export/
+
 # Miscellaneous
 *.bak
