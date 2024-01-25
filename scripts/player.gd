@@ -186,7 +186,7 @@ func cycle() -> void:
 				_:  # Free (any)
 					game.downloads += get_downloads_multiply()
 
-		if game.finished:
+		if not game.finished:
 			if self.energy <= 0.0 or self.mental_health <= 10.0:
 				return
 
