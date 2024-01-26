@@ -32,7 +32,9 @@ var games: Array[Dictionary] = []
 ## Player skills switches
 var skills: Dictionary = {
 	"able_ads": false,
+	"able_microtransactions": false,
 	"able_p2w": false,
+	"able_monetize": false,
 	"able_paid": false
 }
 
@@ -108,12 +110,8 @@ func get_day_time_string() -> String:
 
 func get_performance_multiply() -> float:
 	if OS.is_debug_build():
-		return 20.0
-	return 0.5
-
-
-func get_profit() -> float:
-	return 0.0
+		return 10.0
+	return 1.0
 
 
 func get_downloads_multiply() -> int:
@@ -125,7 +123,7 @@ func get_last_game():
 
 
 func get_energy_consuming() -> float:
-	return 1.0 * (get_performance_multiply() * 0.125)
+	return 0.5 * (get_performance_multiply() * 0.125)
 
 
 func get_experience_multiply() -> int:
@@ -165,12 +163,12 @@ func cycle() -> void:
 				1:  # Free with Ads
 					game.downloads += get_downloads_multiply()
 
-					if randf() > 0.975:
+					if randf() > 0.90:
 						var earned: int = randi_range(1, 3) * get_downloads_multiply()
 						game.paid_off += earned
 						self.money += earned
 
-				2:  # Free with Pay-to-Win
+				2:  # Free with Microtransactions
 					game.downloads += get_downloads_multiply()
 
 					if randf() > 0.75:
@@ -178,10 +176,28 @@ func cycle() -> void:
 						game.paid_off += earned
 						self.money += earned
 
-				3:  # Paid
-					if randf() > 0.3:
-						self.money += 10
+				3:  # Free with Pay-to-Win
+					game.downloads += get_downloads_multiply()
+
+					if randf() > 0.50:
+						var earned: int = 10 * get_downloads_multiply()
+						game.paid_off += earned
+						self.money += earned
+
+				4:  # Free with Monetization
+					game.downloads += get_downloads_multiply()
+
+					if randf() > 0.60:
+						var earned: int = randi_range(5, 15) * get_downloads_multiply()
+						game.paid_off += earned
+						self.money += earned
+
+				5:  # Paid
+					if randf() > 0.35:
+						var earned: int = 20
 						game.downloads += 1
+						game.paid_off += earned
+						self.money += earned
 
 				_:  # Free (any)
 					game.downloads += get_downloads_multiply()

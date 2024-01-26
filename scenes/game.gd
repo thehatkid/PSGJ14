@@ -11,19 +11,18 @@ var fade_out: bool = false
 @onready var startmenu: Panel = $CanvasLayer/StartMenu
 @onready var layer_paused: CanvasLayer = $CanvasLayer/GroupModals/PauseLayer
 @onready var layer_day: CanvasLayer = $CanvasLayer/GroupModals/DayLayer
-@onready var layer_new_player: CanvasLayer = $CanvasLayer/GroupModals/NewPlayerLayer  # TODO: Remove this model in future
 @onready var layer_confirm: CanvasLayer = $CanvasLayer/GroupModals/ConfirmLayer
 @onready var layer_maker: CanvasLayer = $CanvasLayer/GroupWindows/LayerMaker
 @onready var layer_skills: CanvasLayer = $CanvasLayer/GroupWindows/LayerSkills
+
+# TODO: Remove this model in future
+@onready var layer_new_player: CanvasLayer = $CanvasLayer/GroupModals/NewPlayerLayer
 
 
 func _ready():
 	if Global.debug:
 		# For fast debugging purposes
 		player.player_name = "Player"
-	else:
-		# Remove debug nodes
-		$CanvasLayer/DebugText.queue_free()
 
 	# Set own visibility for some nodes
 	fader.visible = true
@@ -113,7 +112,7 @@ func _process(delta: float):
 
 func _skip_day():
 	# Time < 16:00 and Time > 07:00
-	if player.day.time < 960 and player.day.time > 420:
+	if player.day.time < 960 and player.day.time > 420 and player.energy > 40:
 		# Ask for skip confirmation
 		layer_confirm.visible = true
 	else:
