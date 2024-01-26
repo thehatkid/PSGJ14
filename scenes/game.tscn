@@ -241,7 +241,7 @@ resource_name = "maker_details"
 script/source = "extends Panel
 
 var _player: Player = Global.player
-var _last_selected: int = 1
+var _last_selected: int = 0
 
 @onready var text_error: Label = $VBox/Error
 @onready var input_name: LineEdit = $VBox/FieldName/Text
@@ -309,7 +309,7 @@ func _on_visibility_changed():
 			option_genre.add_item(\"Free with Microtransactions\")
 
 		if _player.skills.able_p2w:
-			option_genre.add_item(\"Free with P2W\")
+			option_genre.add_item(\"Free with Pay-to-Win\")
 
 		if _player.skills.able_monetize:
 			option_genre.add_item(\"Free with Monetization\")
@@ -1066,7 +1066,7 @@ label_settings = SubResource("LabelSettings_lujhq")
 horizontal_alignment = 2
 
 [node name="Text" type="LineEdit" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox/FieldName"]
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 placeholder_text = "Game Name..."
 max_length = 30
@@ -1085,7 +1085,7 @@ label_settings = SubResource("LabelSettings_lujhq")
 horizontal_alignment = 2
 
 [node name="Genre" type="OptionButton" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details/VBox/FieldGenre"]
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 
 [node name="HBox" type="HBoxContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/Details"]
