@@ -38,6 +38,13 @@ var skills: Dictionary = {
 	"able_paid": false
 }
 
+## Player boosters counters
+var boosters: Dictionary = {
+	"speed": 0,
+	"exp": 0,
+	"downloads": 0
+}
+
 ## Day cycle information
 var day: Dictionary = {
 	"paused": true,
@@ -108,18 +115,19 @@ func get_day_time_string() -> String:
 	return "%02d:%02d" % [h, m]
 
 
+func get_last_game():
+	return {} if not games else games[-1]
+
+
 func get_performance_multiply() -> float:
-	if OS.is_debug_build():
-		return 10.0
-	return 1.0
+	if boosters.speed > 0:
+		return 1.0 + float(boosters.speed)
+	else:
+		return 1.0
 
 
 func get_downloads_multiply() -> int:
-	return 1
-
-
-func get_last_game():
-	return {} if not games else games[-1]
+	return 1 + boosters.downloads
 
 
 func get_energy_consuming() -> float:
@@ -127,7 +135,7 @@ func get_energy_consuming() -> float:
 
 
 func get_experience_multiply() -> int:
-	return 1
+	return 1 + boosters.exp
 
 
 func cycle() -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=59 format=3 uid="uid://d2n77k2p77id5"]
+[gd_scene load_steps=58 format=3 uid="uid://d2n77k2p77id5"]
 
 [ext_resource type="Script" path="res://scenes/game.gd" id="1_rnpc1"]
 [ext_resource type="Texture2D" uid="uid://dna70budtnokc" path="res://resources/backgrounds/gradient_1.png" id="2_t0s2q"]
@@ -46,9 +46,8 @@ func _process(_delta):
 		\"dlm\": _player.get_downloads_multiply(),
 		\"em\": _player.get_experience_multiply()
 	})
-	text += \"Skills: {s}\\n\".format({
-		\"s\": _player.skills
-	})
+	text += \"Skills: {s}\\n\".format({\"s\": _player.skills})
+	text += \"Boosters: {b}\\n\".format({\"b\": _player.boosters})
 
 	if _player.games:
 		text += \"\\nGames:\\n\\n\"
@@ -343,61 +342,126 @@ script/source = "extends CanvasLayer
 
 var _player: Player = Global.player
 
-var _skills: Array[Button] = []
-#var _boosters: Array[Button] = []
+var _skills: Dictionary = {}
+var _boosters: Dictionary = {}
+
+var _boosters_costs: Dictionary = {
+	\"speed\": 100,
+	\"exp\": 250,
+	\"downloads\": 400
+}
 
 @onready var _title: Label = $Window/Container/Content/Title
-@onready var _list: VBoxContainer = $Window/Container/Content/TabContainer/Skills/ScrollContainer/Skills
+@onready var _list_skills: VBoxContainer = $Window/Container/Content/TabContainer/Skills/ScrollContainer/Skills
+@onready var _list_boosters: VBoxContainer = $Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters
 @onready var _se_learned: AudioStreamPlayer = $SELearned
 
 
 func _ready():
-	_skills.append(_list.get_node(\"Skill1/VBox/Claim\"))
-	_skills.append(_list.get_node(\"Skill2/VBox/Claim\"))
-	_skills.append(_list.get_node(\"Skill3/VBox/Claim\"))
-	_skills.append(_list.get_node(\"Skill4/VBox/Claim\"))
-	_skills.append(_list.get_node(\"Skill5/VBox/Claim\"))
+	# Get all skills
+	_skills[\"1\"] = _list_skills.get_node(\"Skill1/VBox/Claim\")
+	_skills[\"2\"] = _list_skills.get_node(\"Skill2/VBox/Claim\")
+	_skills[\"3\"] = _list_skills.get_node(\"Skill3/VBox/Claim\")
+	_skills[\"4\"] = _list_skills.get_node(\"Skill4/VBox/Claim\")
+	_skills[\"5\"] = _list_skills.get_node(\"Skill5/VBox/Claim\")
+
+	# Get all boosters
+	_boosters[\"1\"] = _list_boosters.get_node(\"Boost1\")
+	_boosters[\"2\"] = _list_boosters.get_node(\"Boost2\")
+	_boosters[\"3\"] = _list_boosters.get_node(\"Boost3\")
 
 
 func _process(_delta: float):
-	# Update title text in Skills window
-	_title.text = \"You have {e} experience.\".format({\"e\": _player.experience})
+	# Update title text
+	_title.text = \"You have {e} experience and ${m} money.\".format({
+		\"e\": _player.experience,
+		\"m\": _player.money
+	})
 
-	# Update skills buttons
-	if _player.experience >= 3 and not _player.skills.able_ads:
-		_skills[0].disabled = false
-
+#region Update skills buttons
+	if _player.experience >= 2 and not _player.skills.able_ads:
+		_skills[\"1\"].disabled = false
 	if _player.experience >= 8 and not _player.skills.able_microtransactions:
-		_skills[1].disabled = false
-
+		_skills[\"2\"].disabled = false
 	if _player.experience >= 16 and not _player.skills.able_p2w:
-		_skills[2].disabled = false
-
+		_skills[\"3\"].disabled = false
 	if _player.experience >= 25 and not _player.skills.able_monetize:
-		_skills[3].disabled = false
-
+		_skills[\"4\"].disabled = false
 	if _player.experience >= 40 and not _player.skills.able_paid:
-		_skills[4].disabled = false
+		_skills[\"5\"].disabled = false
 
 	if _player.skills.able_ads:
-		_skills[0].text = \"Learned!\"
-		_skills[0].disabled = true
-
+		_skills[\"1\"].text = \"Learned!\"
+		_skills[\"1\"].disabled = true
 	if _player.skills.able_microtransactions:
-		_skills[1].text = \"Learned!\"
-		_skills[1].disabled = true
-
+		_skills[\"2\"].text = \"Learned!\"
+		_skills[\"2\"].disabled = true
 	if _player.skills.able_p2w:
-		_skills[2].text = \"Learned!\"
-		_skills[2].disabled = true
-
+		_skills[\"3\"].text = \"Learned!\"
+		_skills[\"3\"].disabled = true
 	if _player.skills.able_monetize:
-		_skills[3].text = \"Learned!\"
-		_skills[3].disabled = true
-
+		_skills[\"4\"].text = \"Learned!\"
+		_skills[\"4\"].disabled = true
 	if _player.skills.able_paid:
-		_skills[4].text = \"Learned!\"
-		_skills[4].disabled = true
+		_skills[\"5\"].text = \"Learned!\"
+		_skills[\"5\"].disabled = true
+#endregion
+
+#region Update boosters
+	# Get all nodes of boosters
+	var boost_1_title: Label = _boosters[\"1\"].get_node(\"Title\")
+	var boost_2_title: Label = _boosters[\"2\"].get_node(\"Title\")
+	var boost_3_title: Label = _boosters[\"3\"].get_node(\"Title\")
+	var boost_1_btn: Button = _boosters[\"1\"].get_node(\"VBox/Buy\")
+	var boost_2_btn: Button = _boosters[\"2\"].get_node(\"VBox/Buy\")
+	var boost_3_btn: Button = _boosters[\"3\"].get_node(\"VBox/Buy\")
+	var boost_1_cost: Label = _boosters[\"1\"].get_node(\"VBox/Cost\")
+	var boost_2_cost: Label = _boosters[\"2\"].get_node(\"VBox/Cost\")
+	var boost_3_cost: Label = _boosters[\"3\"].get_node(\"VBox/Cost\")
+
+	# Set boosters texts
+	boost_1_title.text = \"Boost Game Development {n}\".format({\"n\": _player.boosters.speed + 1})
+	boost_2_title.text = \"Boost Experience Gain {n}\".format({\"n\": _player.boosters.exp + 1})
+	boost_3_title.text = \"Boost Download Counts {n}\".format({\"n\": _player.boosters.downloads + 1})
+
+	# Set boosters cost texts
+	boost_1_cost.text = \"Cost: ${n}\".format({
+		\"n\": _boosters_costs.speed * (_player.boosters.speed + 1)
+	})
+	boost_2_cost.text = \"Cost: ${n}\".format({
+		\"n\": _boosters_costs.exp * (_player.boosters.exp + 1)
+	})
+	boost_3_cost.text = \"Cost: ${n}\".format({
+		\"n\": _boosters_costs.downloads * (_player.boosters.downloads + 1)
+	})
+
+	# Unlock buttons when certain money is enough to buy
+	if _player.money >= _boosters_costs.speed * (_player.boosters.speed + 1):
+		boost_1_btn.disabled = false
+	else:
+		boost_1_btn.disabled = true
+
+	if _player.money >= _boosters_costs.exp * (_player.boosters.exp + 1):
+		boost_2_btn.disabled = false
+	else:
+		boost_2_btn.disabled = true
+
+	if _player.money >= _boosters_costs.downloads * (_player.boosters.downloads + 1):
+		boost_3_btn.disabled = false
+	else:
+		boost_3_btn.disabled = true
+
+	# Limit boosters amount
+	if _player.boosters.speed >= 9:
+		boost_1_title.text = \"Boost Game Development {n}\".format({\"n\": _player.boosters.speed})
+		boost_1_btn.text = \"MAX\"
+		boost_1_btn.disabled = true
+
+	if _player.boosters.exp >= 5:
+		boost_2_title.text = \"Boost Experience Gain {n}\".format({\"n\": _player.boosters.exp})
+		boost_2_btn.text = \"MAX\"
+		boost_2_btn.disabled = true
+#endregion
 
 
 func _on_close_gui_input(event: InputEvent):
@@ -407,6 +471,7 @@ func _on_close_gui_input(event: InputEvent):
 				self.visible = false
 
 
+#region All skills buttons pressed signals
 func _on_skill1_claim_pressed():
 	_player.skills.able_ads = true
 	_se_learned.play()
@@ -430,6 +495,27 @@ func _on_skill4_claim_pressed():
 func _on_skill5_claim_pressed():
 	_player.skills.able_paid = true
 	_se_learned.play()
+#endregion
+
+
+#region All boosters buttons pressed signals
+func _on_booster1_buy_pressed():
+	_player.money -= _boosters_costs.speed * (_player.boosters.speed + 1)
+	_player.boosters.speed += 1
+	_se_learned.play()
+
+
+func _on_booster2_buy_pressed():
+	_player.money -= _boosters_costs.exp * (_player.boosters.exp + 1)
+	_player.boosters.exp += 1
+	_se_learned.play()
+
+
+func _on_booster3_buy_pressed():
+	_player.money -= _boosters_costs.downloads * (_player.boosters.downloads + 1)
+	_player.boosters.downloads += 1
+	_se_learned.play()
+#endregion
 "
 
 [sub_resource type="LabelSettings" id="LabelSettings_5wphe"]
@@ -476,10 +562,6 @@ font_color = Color(0.752941, 0.752941, 0.752941, 1)
 line_spacing = 0.0
 font_size = 14
 font_color = Color(0.627451, 0.627451, 0.878431, 1)
-
-[sub_resource type="LabelSettings" id="LabelSettings_myoua"]
-line_spacing = 0.0
-font_size = 32
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85rao"]
 content_margin_left = 8.0
@@ -1292,7 +1374,7 @@ text = "Learn"
 [node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Skills/ScrollContainer/Skills/Skill1/VBox"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "Cost: 3 Exp"
+text = "Cost: 2 Exp"
 label_settings = SubResource("LabelSettings_cot8y")
 horizontal_alignment = 1
 
@@ -1575,12 +1657,191 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters"]
+[node name="Boost1" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters"]
+custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
-text = "Work in Progress...?"
-label_settings = SubResource("LabelSettings_myoua")
+theme_override_styles/panel = SubResource("StyleBoxFlat_up6cj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost1"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -134.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Boost Game Development 1"
+label_settings = SubResource("LabelSettings_oxdrh")
+
+[node name="Description" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost1"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -44.0
+offset_right = -128.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "This boost increases making games progression speed."
+label_settings = SubResource("LabelSettings_ypcig")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost1"]
+custom_minimum_size = Vector2(100, 64)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -108.0
+offset_top = -37.0
+offset_right = -8.0
+offset_bottom = 35.0
+grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+
+[node name="Buy" type="Button" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost1/VBox"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Buy"
+
+[node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost1/VBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Cost: $100"
+label_settings = SubResource("LabelSettings_cot8y")
 horizontal_alignment = 1
-vertical_alignment = 1
+
+[node name="Boost2" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_up6cj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost2"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -134.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Boost Experience Gain 1"
+label_settings = SubResource("LabelSettings_oxdrh")
+
+[node name="Description" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost2"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -44.0
+offset_right = -128.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "This boost increases amount of gaining experience after finishing a game."
+label_settings = SubResource("LabelSettings_ypcig")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost2"]
+custom_minimum_size = Vector2(100, 64)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -108.0
+offset_top = -37.0
+offset_right = -8.0
+offset_bottom = 35.0
+grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+
+[node name="Buy" type="Button" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost2/VBox"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Buy"
+
+[node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost2/VBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Cost: $200"
+label_settings = SubResource("LabelSettings_cot8y")
+horizontal_alignment = 1
+
+[node name="Boost3" type="Panel" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_up6cj")
+
+[node name="Title" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost3"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -134.0
+offset_bottom = 30.0
+grow_horizontal = 2
+text = "Boost Download Counts 1"
+label_settings = SubResource("LabelSettings_oxdrh")
+
+[node name="Description" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost3"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -44.0
+offset_right = -128.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "This boost increases amount of gaining downloads from finished games."
+label_settings = SubResource("LabelSettings_ypcig")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost3"]
+custom_minimum_size = Vector2(100, 64)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -108.0
+offset_top = -37.0
+offset_right = -8.0
+offset_bottom = 35.0
+grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+
+[node name="Buy" type="Button" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost3/VBox"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Buy"
+
+[node name="Cost" type="Label" parent="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost3/VBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Cost: $400"
+label_settings = SubResource("LabelSettings_cot8y")
+horizontal_alignment = 1
 
 [node name="SELearned" type="AudioStreamPlayer" parent="CanvasLayer/GroupWindows/LayerSkills"]
 stream = ExtResource("6_n00jc")
@@ -2035,6 +2296,9 @@ color = Color(0, 0, 0, 1)
 [connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Skills/ScrollContainer/Skills/Skill3/VBox/Claim" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_skill3_claim_pressed"]
 [connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Skills/ScrollContainer/Skills/Skill4/VBox/Claim" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_skill4_claim_pressed"]
 [connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Skills/ScrollContainer/Skills/Skill5/VBox/Claim" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_skill5_claim_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost1/VBox/Buy" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_booster1_buy_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost2/VBox/Buy" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_booster2_buy_pressed"]
+[connection signal="pressed" from="CanvasLayer/GroupWindows/LayerSkills/Window/Container/Content/TabContainer/Boosters/ScrollContainer/Boosters/Boost3/VBox/Buy" to="CanvasLayer/GroupWindows/LayerSkills" method="_on_booster3_buy_pressed"]
 [connection signal="pressed" from="CanvasLayer/StartMenu/Bottom/HBox/Store" to="CanvasLayer/StartMenu" method="_on_store_pressed"]
 [connection signal="pressed" from="CanvasLayer/StartMenu/Bottom/HBox/Shutdown" to="CanvasLayer/StartMenu" method="_on_shutdown_pressed"]
 [connection signal="pressed" from="CanvasLayer/Taskbar/Left/Start" to="CanvasLayer/Taskbar" method="_on_start_pressed"]
