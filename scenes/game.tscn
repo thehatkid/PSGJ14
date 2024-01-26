@@ -1,4 +1,4 @@
-[gd_scene load_steps=58 format=3 uid="uid://d2n77k2p77id5"]
+[gd_scene load_steps=59 format=3 uid="uid://d2n77k2p77id5"]
 
 [ext_resource type="Script" path="res://scenes/game.gd" id="1_rnpc1"]
 [ext_resource type="Texture2D" uid="uid://dna70budtnokc" path="res://resources/backgrounds/gradient_1.png" id="2_t0s2q"]
@@ -134,21 +134,24 @@ script/source = "extends CanvasLayer
 
 var _player: Player = Global.player
 
-var make_progressbar: ProgressBar
-var gamelist: VBoxContainer
-var btn_make: Button
+@onready var progressbar: ProgressBar = $Window/Container/List/Buttons/Make/ProgressBar
+@onready var warn_text: Label = $Window/Container/List/Warning
+@onready var gamelist: VBoxContainer = $Window/Container/List/ScrollContainer/Games
+@onready var btn_make: Button = $Window/Container/List/Buttons/Make
 
 
 func _ready():
-	make_progressbar = $Window/Container/List/Buttons/Make/ProgressBar
-	gamelist = $Window/Container/List/ScrollContainer/Games
-	btn_make = $Window/Container/List/Buttons/Make
-
-	make_progressbar.visible = false
+	progressbar.visible = false
+	warn_text.visible = false
 
 
 func _process(_delta: float):
 	var last_game = _player.get_last_game()
+
+	if _player.energy < 20:
+		warn_text.visible = true
+	else:
+		warn_text.visible = false
 
 	if last_game:
 		# Update \"Make a Game\" button in Make window
@@ -200,6 +203,10 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7icpj"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_y345q"]
+line_spacing = 0.0
+font_color = Color(1, 1, 0.501961, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g6x3g"]
 content_margin_left = 4.0
@@ -1007,6 +1014,19 @@ expand_mode = 1
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxEmpty_7icpj")
+
+[node name="Warning" type="Label" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List"]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 4.0
+offset_bottom = 27.0
+grow_horizontal = 2
+text = "You got tired. Go get some sleep."
+label_settings = SubResource("LabelSettings_y345q")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/GroupWindows/LayerMaker/Window/Container/List"]
 layout_mode = 1
