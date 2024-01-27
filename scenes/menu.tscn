@@ -8,7 +8,9 @@ script/source = "extends Node2D
 
 var fade_out: bool = false
 var fade_in: bool = false
+
 var game: bool = false
+var credits: bool = false
 var quit: bool = false
 
 @onready var fader: ColorRect = $CanvasLayer/Fader
@@ -43,8 +45,18 @@ func _process(delta: float):
 			if game:
 				get_tree().change_scene_to_file(\"res://scenes/game.tscn\")
 
+			if credits:
+				get_tree().change_scene_to_file(\"res://scenes/credits.tscn\")
+
 			if quit:
 				get_tree().quit()
+
+
+func _input(event: InputEvent):
+	if event.is_action_pressed(\"Menu\"):
+		fade_out = false
+		fade_in = true
+		quit = true
 
 
 func _on_load_pressed():
@@ -55,6 +67,11 @@ func _on_load_pressed():
 func _on_start_pressed():
 	fade_in = true
 	game = true
+
+
+func _on_credits_pressed():
+	fade_in = true
+	credits = true
 
 
 func _on_quit_pressed():
@@ -114,6 +131,11 @@ custom_minimum_size = Vector2(120, 48)
 layout_mode = 2
 text = "Start New Game"
 
+[node name="Credits" type="Button" parent="CanvasLayer/Container/VBox/Buttons"]
+custom_minimum_size = Vector2(120, 48)
+layout_mode = 2
+text = "Credits"
+
 [node name="Quit" type="Button" parent="CanvasLayer/Container/VBox/Buttons"]
 custom_minimum_size = Vector2(120, 48)
 layout_mode = 2
@@ -130,4 +152,5 @@ color = Color(0, 0, 0, 1)
 
 [connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Load" to="." method="_on_load_pressed"]
 [connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Start" to="." method="_on_start_pressed"]
+[connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Credits" to="." method="_on_credits_pressed"]
 [connection signal="pressed" from="CanvasLayer/Container/VBox/Buttons/Quit" to="." method="_on_quit_pressed"]
