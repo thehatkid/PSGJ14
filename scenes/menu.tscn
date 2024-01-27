@@ -1,5 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://jtdla6lbv82p"]
+[gd_scene load_steps=6 format=3 uid="uid://jtdla6lbv82p"]
 
+[ext_resource type="Texture2D" uid="uid://8nwerbgyc0am" path="res://resources/sprites/jam.png" id="2_d1vdt"]
 [ext_resource type="Texture2D" uid="uid://dwkeu7bxtqdy3" path="res://resources/sprites/title.png" id="2_i4mup"]
 
 [sub_resource type="GDScript" id="GDScript_426d1"]
@@ -79,6 +80,11 @@ func _on_quit_pressed():
 	quit = true
 "
 
+[sub_resource type="LabelSettings" id="LabelSettings_6eho2"]
+line_spacing = 0.0
+font_size = 20
+font_color = Color(0.752941, 0.603922, 0.752941, 1)
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_x0bhv"]
 
 [node name="SceneMenu" type="Node2D"]
@@ -93,6 +99,41 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.168627, 0.121569, 0.368627, 1)
+
+[node name="JamLogo" type="TextureRect" parent="CanvasLayer"]
+custom_minimum_size = Vector2(200, 200)
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -224.0
+offset_top = -276.0
+offset_right = -24.0
+offset_bottom = -76.0
+grow_horizontal = 0
+grow_vertical = 0
+texture = ExtResource("2_d1vdt")
+expand_mode = 1
+
+[node name="JamLabel" type="Label" parent="CanvasLayer"]
+custom_minimum_size = Vector2(200, 0)
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -224.0
+offset_top = -76.0
+offset_right = -24.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Pirate Software
+Game Jam 14"
+label_settings = SubResource("LabelSettings_6eho2")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Container" type="HBoxContainer" parent="CanvasLayer"]
 anchors_preset = 15
