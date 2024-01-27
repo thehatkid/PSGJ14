@@ -169,10 +169,30 @@ func _process(_delta: float):
 		var item: Panel = gamelist.get_node_or_null(\"GameItem{i}\".format({\"i\": game.id}))
 		if item:
 			var state_text: String
+			var genre_text: String
+
+			match game.genre:
+				1:
+					genre_text = \"Free with Ads\"
+				2:
+					genre_text = \"Free with Microtransactions\"
+				3:
+					genre_text = \"Free with Pay-to-Win\"
+				4:
+					genre_text = \"Free with Monetization\"
+				5:
+					genre_text = \"Paid\"
+				_:
+					genre_text = \"Free\"
+
 			if game.finished:
-				state_text = \"Downloads: {dc}\".format({\"dc\": game.downloads})
+				state_text = \"Downloads: {dc} | Genre: {g} | Paid offs: ${po}\".format({
+					\"dc\": game.downloads,
+					\"po\": game.paid_off,
+					\"g\": genre_text
+				})
 			else:
-				state_text = \"Making, finished at {v}%...\".format({\"v\": round(game.finished_at)})
+				state_text = \"Making, Finished at {v}%...\".format({\"v\": round(game.finished_at)})
 			item.get_node(\"State\").text = state_text
 
 
