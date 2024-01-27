@@ -117,3 +117,10 @@ func _skip_day():
 		layer_confirm.visible = true
 	else:
 		fade_in = true
+
+
+func _end_game():
+	# Change scene to ending
+	if player.get_day_count() >= 8:
+		get_tree().change_scene_to_file("res://scenes/end.tscn")
+		return

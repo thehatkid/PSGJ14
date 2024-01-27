@@ -1,0 +1,200 @@
+[gd_scene load_steps=5 format=3 uid="uid://5r4mgxww642o"]
+
+[sub_resource type="GDScript" id="GDScript_cdstp"]
+resource_name = "end"
+script/source = "extends Node2D
+
+var _player: Player = Global.player
+var _ending: int = 0
+
+var _fade_in: bool = false
+var _fade_out: bool = false
+
+@onready var _fader: ColorRect = $CanvasLayer/Fader
+@onready var _title: Label = $CanvasLayer/CenterContainer/VBox/Title
+@onready var _text: Label = $CanvasLayer/CenterContainer/VBox/Text
+@onready var _end_btn: Button = $CanvasLayer/CenterContainer/VBox/Buttons/End
+
+const MIN_DOWNLOADS: int = 5000000
+const MIN_MONEY: int = 20000
+
+enum Ending {
+	NEUTRAL,
+	GOOD_MONEY,
+	GOOD_DOWNLOADS,
+	BAD_MENTAL
+}
+
+
+func _ready():
+	_end_btn.disabled = true
+	_end_btn.modulate.a = 0.0
+
+	_fader.visible = true
+	_fader.color.a = 1.0
+
+	_fade_out = true
+
+	# Detect ending
+	if _player.mental_health <= 10.0:
+		_ending = Ending.BAD_MENTAL
+	elif _player.get_total_download_count() >= MIN_DOWNLOADS:
+		_ending = Ending.GOOD_DOWNLOADS
+	elif _player.money >= MIN_MONEY:
+		_ending = Ending.GOOD_MONEY
+	else:
+		_ending = Ending.NEUTRAL
+
+	# Set ending texts
+	match _ending:
+		# Good Ending #1: Got enough total download count
+		Ending.GOOD_DOWNLOADS:
+			_title.text = \"Ending #1: Good End\"
+
+			_text.text = \"You did overcomplish your weekly goal!\\n\"
+			_text.text += \"Your well-made (or not) games is spreading with intimidating speed.\\n\"
+			_text.text += \"Even that in some your games is needed to pay to win...\\n\\n\"
+			_text.text += \"\\\"Make games, ya goblins!\\\", - Thor\"
+
+		# Good Ending #2: Got enough money
+		Ending.GOOD_MONEY:
+			_title.text = \"Ending #2: Good End\"
+
+			_text.text = \"You did earned some money for your college.\\n\"
+			_text.text += \"Your well-made (or not) games is kinda spreading around the world.\\n\"
+			_text.text += \"...but you still have motivation to make more games...\\n\\n\"
+			_text.text += \"Maybe it's not the end of the game...?\"
+
+		# Bad Ending: Player has lost his mind :O
+		Ending.BAD_MENTAL:
+			_title.text = \"Ending #4: Bad End\"
+
+			_text.text = \"You have run out of nerves to do anything.\\n\"
+			_text.text += \"You are starting to go crazy.\\n\"
+			_text.text += \"Well, you can always try again, at least.\\n\\n\"
+			_text.text += \"Try not to overdo it.\"
+
+		# Neutral/Any Ending
+		_:
+			_title.text = \"Ending #3: Neutral End\"
+
+			if len(_player.games) < 5:
+				_text.text = \"You sat in a chair for an entire week without doing anything.\\n\"
+				_text.text += \"Student debts won't thank you for doing this.\\n\"
+				_text.text += \"At least, you still have full energy to do other things...?\\n\\n\"
+				_text.text += \"(Really?)\"
+			else:
+				_text.text = \"You didn't have enough time to complete your goals for the week.\\n\"
+				_text.text += \"Student debts won't thank you for doing this.\\n\"
+				_text.text += \"Well, you can always try again, at least.\\n\\n\"
+				_text.text += \"You tried.\"
+
+
+func _process(delta: float):
+	if _fade_out:
+		_fader.color.a -= delta * 0.5
+		if _fader.color.a <= 0.0:
+			_fader.color.a = 0.0
+			_fader.visible = false
+			_fade_out = false
+			_end_btn.disabled = false
+			_end_btn.modulate.a = 1.0
+
+	if _fade_in:
+		_fader.visible = true
+		_fader.color.a += delta * 0.5
+		if _fader.color.a >= 1.0:
+			_fader.color.a = 1.0
+			_fade_in = false
+			_player.reset()
+			get_tree().change_scene_to_file(\"res://scenes/splash.tscn\")
+
+
+func _on_end_pressed():
+	_end_btn.disabled = true
+	_end_btn.modulate.a = 0.0
+	_fade_in = true
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_2md0n"]
+line_spacing = 0.0
+font_size = 48
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8w70t"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_nfpn8"]
+line_spacing = 2.0
+font_size = 20
+font_color = Color(0.752941, 0.752941, 0.752941, 1)
+
+[node name="SceneEnd" type="Node2D"]
+script = SubResource("GDScript_cdstp")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Background" type="ColorRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0627451, 0.0627451, 0.0941176, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/CenterContainer"]
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/CenterContainer/VBox"]
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+text = "Ending #0: Placeholder"
+label_settings = SubResource("LabelSettings_2md0n")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HSep1" type="HSeparator" parent="CanvasLayer/CenterContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8w70t")
+
+[node name="Text" type="Label" parent="CanvasLayer/CenterContainer/VBox"]
+custom_minimum_size = Vector2(800, 150)
+layout_mode = 2
+text = "Some ending placeholder text."
+label_settings = SubResource("LabelSettings_nfpn8")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HSep2" type="HSeparator" parent="CanvasLayer/CenterContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 60
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8w70t")
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/CenterContainer/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="End" type="Button" parent="CanvasLayer/CenterContainer/VBox/Buttons"]
+custom_minimum_size = Vector2(180, 48)
+layout_mode = 2
+text = "End"
+
+[node name="Fader" type="ColorRect" parent="CanvasLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[connection signal="pressed" from="CanvasLayer/CenterContainer/VBox/Buttons/End" to="." method="_on_end_pressed"]

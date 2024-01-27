@@ -48,6 +48,7 @@ func _process(_delta):
 	})
 	text += \"Skills: {s}\\n\".format({\"s\": _player.skills})
 	text += \"Boosters: {b}\\n\".format({\"b\": _player.boosters})
+	text += \"Total download count: {n}\".format({\"n\": _player.get_total_download_count()})
 
 	if _player.games:
 		text += \"\\nGames:\\n\\n\"
@@ -807,6 +808,9 @@ func _process(delta: float):
 
 func _on_visibility_changed():
 	if visible:
+		if _player.get_day_count() >= 8:
+			get_node(\"../../..\")._end_game()
+
 		# Update text and color
 		_text.text = \"Day {d}\".format({\"d\": _player.get_day_count()})
 

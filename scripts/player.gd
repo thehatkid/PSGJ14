@@ -53,6 +53,33 @@ var day: Dictionary = {
 }
 
 
+func reset():
+	player_name = ""
+
+	_delta_daytime = 0.0
+	day.paused = true
+	day.count = 1
+	day.time = 450
+
+	mental_health = 100.0
+	energy = 100.0
+
+	money = 50
+	experience = 0
+
+	games = []
+
+	for i in skills:
+		skills[i] = false
+
+	for i in boosters:
+		boosters[i] = 0
+
+	game_counter = 0
+	delta_total = 0.0
+	havent_sleep = false
+
+
 func next_day():
 	if day.time >= 420:
 		day.count += 1
@@ -117,6 +144,15 @@ func get_day_time_string() -> String:
 
 func get_last_game():
 	return {} if not games else games[-1]
+
+
+func get_total_download_count() -> int:
+	var total: int = 0
+
+	for game in self.games:
+		total += int(game.downloads)
+
+	return total
 
 
 func get_performance_multiply() -> float:
